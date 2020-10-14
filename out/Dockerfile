@@ -1,4 +1,4 @@
-FROM alpine
+FROM ubuntu
 
 ADD versioon /usr/bin/
 
