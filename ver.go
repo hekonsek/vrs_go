@@ -16,6 +16,15 @@ const VersioonConfigFileName = "versioon.yml"
 
 type VersioonConfig struct {
 	Version string
+	Sync    *Sync
+}
+
+type Sync struct {
+	Files []SyncFile
+}
+
+type SyncFile struct {
+	Name string
 }
 
 var NoVersioonFileFound = errors.New("no versioon file found")
@@ -140,13 +149,38 @@ func Bump(options *BumpOptions) error {
 		return err
 	}
 
-	versionParts := strings.Split(config.Version, ".")
+	oldVersion := config.Version
+	versionParts := strings.Split(oldVersion, ".")
 	minorVersion, err := strconv.Atoi(versionParts[1])
 	if err != nil {
 		return err
 	}
 	config.Version = fmt.Sprintf("%s.%d.%s", versionParts[0], minorVersion+1, versionParts[2])
 	err = config.WriteAndCommit(options.Basedir, options.GitCommit, "Version bump.")
+	if err != nil {
+		return err
+	}
+
+	if config.Sync != nil {
+		for _, file := range config.Sync.Files {
+			err = bumpInFile(path.Join(options.Basedir, file.Name), oldVersion, config.Version)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func bumpInFile(path string, oldVersion string, newVersion string) error {
+	originalBytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	bumpedFile := strings.ReplaceAll(string(originalBytes), oldVersion, newVersion)
+
+	err = ioutil.WriteFile(path, []byte(bumpedFile), 0644)
 	if err != nil {
 		return err
 	}
