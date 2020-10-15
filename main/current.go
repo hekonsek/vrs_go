@@ -17,6 +17,6 @@ var currentCommand = &cobra.Command{
 		version, err := ver.ReadCurrentVersion(nil)
 		osexit.ExitOnError(err)
 
-		fmt.Println(version)
+		fmt.Print(version)
 	},
 }
