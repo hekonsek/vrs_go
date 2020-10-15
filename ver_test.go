@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestReadDefaultVersionIfNoVersionFile(t *testing.T) {
+func TestReadCurrentVersionDetectNoVersioonFile(t *testing.T) {
 	// Given
 	basedir, err := ioutil.TempDir("", "ver-test-*")
 	assert.NoError(t, err)
@@ -18,16 +18,21 @@ func TestReadDefaultVersionIfNoVersionFile(t *testing.T) {
 	options.GitCommit = false
 
 	// When
-	version, err := ver.ReadCurrentVersion(options)
+	_, err = ver.ReadCurrentVersion(options)
 
 	// Then
-	assert.NoError(t, err)
-	assert.Equal(t, "0.0.0", version)
+	assert.Equal(t, err, ver.NoVersioonFileFound)
 }
 
-func TestInitialVersionBump(t *testing.T) {
+func TestVersionBump(t *testing.T) {
 	// Given
 	basedir, err := ioutil.TempDir("", "ver-test-*")
+	assert.NoError(t, err)
+	initOptions, err := ver.NewDefaultInitOptions()
+	assert.NoError(t, err)
+	initOptions.GitCommit = false
+	initOptions.Basedir = basedir
+	err = ver.Init(initOptions)
 	assert.NoError(t, err)
 	options := &ver.BumpOptions{Basedir: basedir, GitCommit: false}
 
@@ -45,36 +50,19 @@ func TestInitialVersionBump(t *testing.T) {
 
 }
 
-func TestVersionBump(t *testing.T) {
-	// Given
-	basedir, err := ioutil.TempDir("", "ver-test-*")
-	assert.NoError(t, err)
-	options := &ver.BumpOptions{Basedir: basedir, GitCommit: false}
-	err = ver.Bump(options)
-	assert.NoError(t, err)
-
-	// When
-	err = ver.Bump(options)
-
-	// Then
-	assert.NoError(t, err)
-	readOptions, err := ver.NewDefaultReadCurrentOptions()
-	assert.NoError(t, err)
-	readOptions.Basedir = basedir
-	version, err := ver.ReadCurrentVersion(readOptions)
-	assert.NoError(t, err)
-	assert.Equal(t, "0.2.0", version)
-}
-
 func TestVersionBumpWithCommit(t *testing.T) {
 	// Given
-	options, err := ver.NewDefaultBumpOptions()
-	assert.NoError(t, err)
+	// Given
 	basedir, err := ioutil.TempDir("", "ver-test-*")
 	assert.NoError(t, err)
-	options.Basedir = basedir
 	err = exec.Command("git", "init", basedir).Run()
 	assert.NoError(t, err)
+	initOptions, err := ver.NewDefaultInitOptions()
+	assert.NoError(t, err)
+	initOptions.Basedir = basedir
+	err = ver.Init(initOptions)
+	assert.NoError(t, err)
+	options := &ver.BumpOptions{Basedir: basedir, GitCommit: true}
 
 	// When
 	err = ver.Bump(options)

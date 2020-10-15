@@ -1,8 +1,9 @@
 package ver
 
 import (
+	"errors"
 	"fmt"
-	"github.com/hekonsek/osexit"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -10,6 +11,104 @@ import (
 	"strconv"
 	"strings"
 )
+
+const VersioonConfigFileName = "versioon.yml"
+
+type VersioonConfig struct {
+	Version string
+}
+
+var NoVersioonFileFound = errors.New("no versioon file found")
+
+func ParseVersioonConfig(basePath string) (*VersioonConfig, error) {
+	versioonConfigPath := path.Join(basePath, VersioonConfigFileName)
+	if _, err := os.Stat(versioonConfigPath); err != nil {
+		if os.IsNotExist(err) {
+			return nil, NoVersioonFileFound
+		}
+	}
+
+	yml, err := ioutil.ReadFile(versioonConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	config := &VersioonConfig{}
+	err = yaml.Unmarshal(yml, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
+
+func (config *VersioonConfig) Write(basePath string) error {
+	yml, err := yaml.Marshal(config)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(path.Join(basePath, VersioonConfigFileName), yml, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (config *VersioonConfig) WriteAndCommit(baseDir string, commit bool, commitMessage string) error {
+	err := config.Write(baseDir)
+	if err != nil {
+		return err
+	}
+
+	if commit {
+		cmd := exec.Command("git", "add", VersioonConfigFileName)
+		cmd.Dir = baseDir
+		err = cmd.Run()
+		if err != nil {
+			return err
+		}
+
+		cmd = exec.Command("git", "commit", "-m", commitMessage)
+		cmd.Dir = baseDir
+		err = cmd.Run()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+type InitOptions struct {
+	Basedir   string
+	GitCommit bool
+}
+
+func NewDefaultInitOptions() (*InitOptions, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	return &InitOptions{
+		Basedir:   wd,
+		GitCommit: true,
+	}, nil
+}
+
+func Init(options *InitOptions) error {
+	if options == nil {
+		o, err := NewDefaultInitOptions()
+		if err != nil {
+			return err
+		}
+		options = o
+	}
+	err := (&VersioonConfig{Version: "0.0.0"}).WriteAndCommit(options.Basedir, options.GitCommit, "Initialized versioon file.")
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 type BumpOptions struct {
 	Basedir   string
@@ -35,37 +134,21 @@ func Bump(options *BumpOptions) error {
 		}
 		options = o
 	}
-	version, err := ReadCurrentVersion(&ReadCurrentOptions{
-		Basedir:   options.Basedir,
-		GitCommit: options.GitCommit,
-	})
+
+	config, err := ParseVersioonConfig(options.Basedir)
 	if err != nil {
 		return err
 	}
 
-	versionParts := strings.Split(version, ".")
+	versionParts := strings.Split(config.Version, ".")
 	minorVersion, err := strconv.Atoi(versionParts[1])
 	if err != nil {
 		return err
 	}
-	version = fmt.Sprintf("%s.%d.%s", versionParts[0], minorVersion+1, versionParts[2])
-
-	versionPath := path.Join(options.Basedir, "version.txt")
-	err = ioutil.WriteFile(versionPath, []byte(version), 0644)
+	config.Version = fmt.Sprintf("%s.%d.%s", versionParts[0], minorVersion+1, versionParts[2])
+	err = config.WriteAndCommit(options.Basedir, options.GitCommit, "Version bump.")
 	if err != nil {
 		return err
-	}
-
-	if options.GitCommit {
-		cmd := exec.Command("git", "add", "version.txt")
-		cmd.Dir = options.Basedir
-		err = cmd.Run()
-		osexit.ExitOnError(err)
-
-		cmd = exec.Command("git", "--git-dir", options.Basedir+"/.git", "commit", "-m", "Version bump.")
-		cmd.Dir = options.Basedir
-		err = cmd.Run()
-		osexit.ExitOnError(err)
 	}
 
 	return nil
@@ -96,31 +179,9 @@ func ReadCurrentVersion(options *ReadCurrentOptions) (string, error) {
 		options = o
 	}
 
-	versionPath := path.Join(options.Basedir, "version.txt")
-	if _, err := os.Stat(versionPath); os.IsNotExist(err) {
-		err = ioutil.WriteFile(versionPath, []byte("0.0.0"), 0644)
-
-		if options.GitCommit {
-			cmd := exec.Command("git", "add", "version.txt")
-			cmd.Dir = options.Basedir
-			err = cmd.Run()
-			osexit.ExitOnError(err)
-
-			cmd = exec.Command("git", "--git-dir", options.Basedir+"/.git", "commit", "-m", "Initial version commit.")
-			cmd.Dir = options.Basedir
-			err = cmd.Run()
-			osexit.ExitOnError(err)
-		}
-
-		if err != nil {
-			return "", err
-		}
-		return "0.0.0", nil
-	} else {
-		versionBytes, err := ioutil.ReadFile(versionPath)
-		if err != nil {
-			return "", err
-		}
-		return string(versionBytes), nil
+	config, err := ParseVersioonConfig(options.Basedir)
+	if err != nil {
+		return "", err
 	}
+	return config.Version, nil
 }
