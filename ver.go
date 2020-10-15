@@ -163,7 +163,7 @@ func Bump(options *BumpOptions) error {
 
 	if config.Sync != nil {
 		for _, file := range config.Sync.Files {
-			err = bumpInFile(path.Join(options.Basedir, file.Name), oldVersion, config.Version)
+			err = bumpInFile(options.Basedir, options.GitCommit, file.Name, oldVersion, config.Version)
 			if err != nil {
 				return err
 			}
@@ -173,16 +173,33 @@ func Bump(options *BumpOptions) error {
 	return nil
 }
 
-func bumpInFile(path string, oldVersion string, newVersion string) error {
-	originalBytes, err := ioutil.ReadFile(path)
+func bumpInFile(baseDir string, gitCommit bool, file string, oldVersion string, newVersion string) error {
+	filePath := path.Join(baseDir, file)
+	originalBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return err
 	}
 	bumpedFile := strings.ReplaceAll(string(originalBytes), oldVersion, newVersion)
 
-	err = ioutil.WriteFile(path, []byte(bumpedFile), 0644)
+	err = ioutil.WriteFile(filePath, []byte(bumpedFile), 0644)
 	if err != nil {
 		return err
+	}
+
+	if gitCommit {
+		cmd := exec.Command("git", "add", file)
+		cmd.Dir = baseDir
+		err = cmd.Run()
+		if err != nil {
+			return err
+		}
+
+		cmd = exec.Command("git", "commit", "-m", "Bumped version.")
+		cmd.Dir = baseDir
+		err = cmd.Run()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
