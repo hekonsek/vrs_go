@@ -16,6 +16,7 @@ func TestReadCurrentVersionDetectNoVersioonFile(t *testing.T) {
 	assert.NoError(t, err)
 	options.Basedir = basedir
 	options.GitCommit = false
+	options.GitPush = false
 
 	// When
 	_, err = vrs.ReadCurrentVersion(options)
@@ -31,6 +32,7 @@ func TestVersionBump(t *testing.T) {
 	initOptions, err := vrs.NewDefaultInitOptions()
 	assert.NoError(t, err)
 	initOptions.GitCommit = false
+	initOptions.GitPush = false
 	initOptions.Basedir = basedir
 	err = vrs.Init(initOptions)
 	assert.NoError(t, err)
@@ -60,9 +62,10 @@ func TestVersionBumpWithCommit(t *testing.T) {
 	initOptions, err := vrs.NewDefaultInitOptions()
 	assert.NoError(t, err)
 	initOptions.Basedir = basedir
+	initOptions.GitPush = false
 	err = vrs.Init(initOptions)
 	assert.NoError(t, err)
-	options := &vrs.BumpOptions{Basedir: basedir, GitCommit: true}
+	options := &vrs.BumpOptions{Basedir: basedir, GitCommit: true, GitPush: false}
 
 	// When
 	err = vrs.Bump(options)

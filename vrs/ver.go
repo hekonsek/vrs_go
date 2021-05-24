@@ -62,7 +62,7 @@ func (config *VersioonConfig) Write(basePath string) error {
 	return nil
 }
 
-func (config *VersioonConfig) WriteAndCommit(baseDir string, commit bool, commitMessage string) error {
+func (config *VersioonConfig) WriteAndCommit(baseDir string, commit bool, push bool, commitMessage string) error {
 	err := config.Write(baseDir)
 	if err != nil {
 		return err
@@ -82,6 +82,29 @@ func (config *VersioonConfig) WriteAndCommit(baseDir string, commit bool, commit
 		if err != nil {
 			return err
 		}
+
+		cmd = exec.Command("git", "tag", "v"+config.Version)
+		cmd.Dir = baseDir
+		err = cmd.Run()
+		if err != nil {
+			return err
+		}
+
+		if push {
+			cmd = exec.Command("git", "push")
+			cmd.Dir = baseDir
+			err = cmd.Run()
+			if err != nil {
+				return err
+			}
+
+			cmd = exec.Command("git", "push", "--tags")
+			cmd.Dir = baseDir
+			err = cmd.Run()
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -90,6 +113,7 @@ func (config *VersioonConfig) WriteAndCommit(baseDir string, commit bool, commit
 type InitOptions struct {
 	Basedir   string
 	GitCommit bool
+	GitPush   bool
 }
 
 func NewDefaultInitOptions() (*InitOptions, error) {
@@ -100,6 +124,7 @@ func NewDefaultInitOptions() (*InitOptions, error) {
 	return &InitOptions{
 		Basedir:   wd,
 		GitCommit: true,
+		GitPush:   true,
 	}, nil
 }
 
@@ -111,7 +136,7 @@ func Init(options *InitOptions) error {
 		}
 		options = o
 	}
-	err := (&VersioonConfig{Version: "0.0.0"}).WriteAndCommit(options.Basedir, options.GitCommit, "Initialized versioon file.")
+	err := (&VersioonConfig{Version: "0.0.0"}).WriteAndCommit(options.Basedir, options.GitCommit, options.GitPush, "Initialized versioon file.")
 	if err != nil {
 		return err
 	}
@@ -121,6 +146,7 @@ func Init(options *InitOptions) error {
 type BumpOptions struct {
 	Basedir   string
 	GitCommit bool
+	GitPush   bool
 }
 
 func NewDefaultBumpOptions() (*BumpOptions, error) {
@@ -131,6 +157,7 @@ func NewDefaultBumpOptions() (*BumpOptions, error) {
 	return &BumpOptions{
 		Basedir:   wd,
 		GitCommit: true,
+		GitPush:   true,
 	}, nil
 }
 
@@ -155,7 +182,7 @@ func Bump(options *BumpOptions) error {
 		return err
 	}
 	config.Version = fmt.Sprintf("%s.%d.%s", versionParts[0], minorVersion+1, versionParts[2])
-	err = config.WriteAndCommit(options.Basedir, options.GitCommit, "Version bump.")
+	err = config.WriteAndCommit(options.Basedir, options.GitCommit, options.GitPush, "Version bump.")
 	if err != nil {
 		return err
 	}
@@ -207,6 +234,7 @@ func bumpInFile(baseDir string, gitCommit bool, file string, oldVersion string, 
 type ReadCurrentOptions struct {
 	Basedir   string
 	GitCommit bool
+	GitPush   bool
 }
 
 func NewDefaultReadCurrentOptions() (*ReadCurrentOptions, error) {
@@ -217,6 +245,7 @@ func NewDefaultReadCurrentOptions() (*ReadCurrentOptions, error) {
 	return &ReadCurrentOptions{
 		Basedir:   wd,
 		GitCommit: true,
+		GitPush:   true,
 	}, nil
 }
 
