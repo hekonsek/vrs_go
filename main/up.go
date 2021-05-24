@@ -13,7 +13,7 @@ func init() {
 }
 
 var bumpCommand = &cobra.Command{
-	Use: "bump",
+	Use: "up",
 	Run: func(cmd *cobra.Command, args []string) {
 		oldVersion, err := vrs.ReadCurrentVersion(nil)
 		osexit.ExitOnError(err)
