@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/hekonsek/osexit"
-	"github.com/hekonsek/ver"
+	"github.com/hekonsek/vrs/vrs"
 	"github.com/spf13/cobra"
 )
 
@@ -14,7 +14,7 @@ func init() {
 var currentCommand = &cobra.Command{
 	Use: "current",
 	Run: func(cmd *cobra.Command, args []string) {
-		version, err := ver.ReadCurrentVersion(nil)
+		version, err := vrs.ReadCurrentVersion(nil)
 		osexit.ExitOnError(err)
 
 		fmt.Print(version)

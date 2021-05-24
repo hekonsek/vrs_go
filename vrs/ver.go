@@ -1,10 +1,9 @@
-package ver
+package vrs
 
 import (
 	"errors"
 	"fmt"
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -12,7 +11,7 @@ import (
 	"strings"
 )
 
-const VersioonConfigFileName = "versioon.yml"
+const VrsConfigFileName = "vrs.yml"
 
 type VersioonConfig struct {
 	Version string
@@ -27,17 +26,17 @@ type SyncFile struct {
 	Name string
 }
 
-var NoVersioonFileFound = errors.New("no versioon file found")
+var NoVersioonFileFound = errors.New("no vrs file found")
 
 func ParseVersioonConfig(basePath string) (*VersioonConfig, error) {
-	versioonConfigPath := path.Join(basePath, VersioonConfigFileName)
+	versioonConfigPath := path.Join(basePath, VrsConfigFileName)
 	if _, err := os.Stat(versioonConfigPath); err != nil {
 		if os.IsNotExist(err) {
 			return nil, NoVersioonFileFound
 		}
 	}
 
-	yml, err := ioutil.ReadFile(versioonConfigPath)
+	yml, err := os.ReadFile(versioonConfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +55,7 @@ func (config *VersioonConfig) Write(basePath string) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(path.Join(basePath, VersioonConfigFileName), yml, 0644)
+	err = os.WriteFile(path.Join(basePath, VrsConfigFileName), yml, 0644)
 	if err != nil {
 		return err
 	}
@@ -70,7 +69,7 @@ func (config *VersioonConfig) WriteAndCommit(baseDir string, commit bool, commit
 	}
 
 	if commit {
-		cmd := exec.Command("git", "add", VersioonConfigFileName)
+		cmd := exec.Command("git", "add", VrsConfigFileName)
 		cmd.Dir = baseDir
 		err = cmd.Run()
 		if err != nil {
@@ -175,13 +174,13 @@ func Bump(options *BumpOptions) error {
 
 func bumpInFile(baseDir string, gitCommit bool, file string, oldVersion string, newVersion string) error {
 	filePath := path.Join(baseDir, file)
-	originalBytes, err := ioutil.ReadFile(filePath)
+	originalBytes, err := os.ReadFile(filePath)
 	if err != nil {
 		return err
 	}
 	bumpedFile := strings.ReplaceAll(string(originalBytes), oldVersion, newVersion)
 
-	err = ioutil.WriteFile(filePath, []byte(bumpedFile), 0644)
+	err = os.WriteFile(filePath, []byte(bumpedFile), 0644)
 	if err != nil {
 		return err
 	}

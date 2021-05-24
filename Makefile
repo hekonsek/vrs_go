@@ -1,10 +1,10 @@
 all: test build
 
 test:
-	go test github.com/hekonsek/ver
+	go test github.com/hekonsek/vrs/vrs
 
 build:
-	go build -o out/versioon main/*.go
+	go build -o out/vrs main/*.go
 
 docker-build: build
 	docker build out -t hekonsek/versioon

@@ -1,4 +1,4 @@
-module github.com/hekonsek/ver
+module github.com/hekonsek/vrs
 
 go 1.15
 

@@ -6,7 +6,7 @@ import (
 )
 
 var verCommand = &cobra.Command{
-	Use: "ver",
+	Use: "vrs",
 	Run: func(cmd *cobra.Command, args []string) {
 		osexit.ExitOnError(cmd.Help())
 	},
