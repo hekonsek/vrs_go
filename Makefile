@@ -12,3 +12,6 @@ test:
 
 build: vendor fmt
 	go build -o out/vrs main/*.go
+
+gosec:
+	gosec vrs main

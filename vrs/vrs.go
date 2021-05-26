@@ -63,7 +63,7 @@ func (config *VersioonConfig) Write(basePath string) error {
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(path.Join(basePath, VrsConfigFileName), yml, 0644)
+	err = os.WriteFile(path.Join(basePath, VrsConfigFileName), yml, 0600)
 	if err != nil {
 		return err
 	}
@@ -84,6 +84,7 @@ func (config *VersioonConfig) WriteAndCommit(baseDir string, commit bool, push b
 			return err
 		}
 
+		// #nosec - Git commit message is safe to set via variable.
 		cmd = exec.Command("git", "commit", "-m", commitMessage)
 		cmd.Dir = baseDir
 		err = cmd.Run()
@@ -249,7 +250,7 @@ func bumpInFile(baseDir string, gitCommit bool, file string, oldVersion string, 
 		bumpedFile = r.ReplaceAllString(string(originalBytes), newVersion)
 	}
 
-	err = os.WriteFile(filePath, []byte(bumpedFile), 0644)
+	err = os.WriteFile(filePath, []byte(bumpedFile), 0600)
 	if err != nil {
 		return err
 	}
