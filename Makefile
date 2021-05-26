@@ -1,13 +1,10 @@
 all: test build
 
+vendor:
+	go mod vendor
+
 test:
 	go test github.com/hekonsek/vrs/vrs
 
-build:
+build: vendor
 	go build -o out/vrs main/*.go
-
-docker-build: build
-	docker build out -t hekonsek/versioon
-
-docker-push: docker-build
-	docker push hekonsek/versioon
