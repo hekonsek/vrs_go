@@ -8,17 +8,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var upCommandProfiles []string
+
 func init() {
-	verCommand.AddCommand(bumpCommand)
+	upCommand.Flags().StringSliceVar(&upCommandProfiles, "profile", []string{}, "")
+	verCommand.AddCommand(upCommand)
 }
 
-var bumpCommand = &cobra.Command{
+var upCommand = &cobra.Command{
 	Use: "up",
 	Run: func(cmd *cobra.Command, args []string) {
 		oldVersion, err := vrs.ReadCurrentVersion(nil)
 		osexit.ExitOnError(err)
 
-		err = vrs.Bump(nil)
+		bumpOptions, err := vrs.NewDefaultBumpOptions()
+		osexit.ExitOnError(err)
+		bumpOptions.ActiveProfiles = upCommandProfiles
+		err = vrs.Bump(bumpOptions)
 		osexit.ExitOnError(err)
 
 		newVersion, err := vrs.ReadCurrentVersion(nil)

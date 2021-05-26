@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -14,8 +15,9 @@ import (
 const VrsConfigFileName = "vrs.yml"
 
 type VersioonConfig struct {
-	Version string
-	Sync    *Sync
+	Version  string
+	Sync     *Sync
+	Profiles []*Profile
 }
 
 type Sync struct {
@@ -23,7 +25,13 @@ type Sync struct {
 }
 
 type SyncFile struct {
+	Name    string
+	Pattern string
+}
+
+type Profile struct {
 	Name string
+	Sync *Sync
 }
 
 var NoVersioonFileFound = errors.New("no vrs file found")
@@ -144,9 +152,10 @@ func Init(options *InitOptions) error {
 }
 
 type BumpOptions struct {
-	Basedir   string
-	GitCommit bool
-	GitPush   bool
+	Basedir        string
+	GitCommit      bool
+	GitPush        bool
+	ActiveProfiles []string
 }
 
 func NewDefaultBumpOptions() (*BumpOptions, error) {
@@ -189,9 +198,33 @@ func Bump(options *BumpOptions) error {
 
 	if config.Sync != nil {
 		for _, file := range config.Sync.Files {
-			err = bumpInFile(options.Basedir, options.GitCommit, file.Name, oldVersion, config.Version)
+			if file.Pattern == "" {
+				err = bumpInFile(options.Basedir, options.GitCommit, file.Name, oldVersion, "", config.Version)
+			} else {
+				err = bumpInFile(options.Basedir, options.GitCommit, file.Name, "", file.Pattern, config.Version)
+			}
 			if err != nil {
 				return err
+			}
+		}
+	}
+
+	for _, profile := range config.Profiles {
+		for _, activeProfile := range options.ActiveProfiles {
+			if activeProfile == profile.Name {
+				if profile.Sync != nil {
+					for _, file := range profile.Sync.Files {
+						if file.Pattern == "" {
+							err = bumpInFile(options.Basedir, options.GitCommit, file.Name, oldVersion, "", config.Version)
+						} else {
+							err = bumpInFile(options.Basedir, options.GitCommit, file.Name, "", file.Pattern, config.Version)
+						}
+						if err != nil {
+							return err
+						}
+					}
+				}
+				break
 			}
 		}
 	}
@@ -199,13 +232,22 @@ func Bump(options *BumpOptions) error {
 	return nil
 }
 
-func bumpInFile(baseDir string, gitCommit bool, file string, oldVersion string, newVersion string) error {
+func bumpInFile(baseDir string, gitCommit bool, file string, oldVersion string, oldExpression string, newVersion string) error {
 	filePath := path.Join(baseDir, file)
 	originalBytes, err := os.ReadFile(filePath)
 	if err != nil {
 		return err
 	}
-	bumpedFile := strings.ReplaceAll(string(originalBytes), oldVersion, newVersion)
+	bumpedFile := ""
+	if oldVersion != "" {
+		bumpedFile = strings.ReplaceAll(string(originalBytes), oldVersion, newVersion)
+	} else {
+		r, err := regexp.Compile(oldExpression)
+		if err != nil {
+			return err
+		}
+		bumpedFile = r.ReplaceAllString(string(originalBytes), newVersion)
+	}
 
 	err = os.WriteFile(filePath, []byte(bumpedFile), 0644)
 	if err != nil {
