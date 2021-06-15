@@ -19,7 +19,7 @@ version: 0.0.0
 ```
 
 During the initialization process:
-- `vrs` config file is automatically committed to version control.
+- `vrs.yml` config file is automatically committed to version control.
 - Created commit is tagged with project version from the `vrs` file.
 - The commit and the tag are pushed into a remote Git repository.
 
