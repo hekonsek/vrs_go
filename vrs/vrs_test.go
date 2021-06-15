@@ -3,10 +3,23 @@ package vrs_test
 import (
 	"github.com/hekonsek/vrs/vrs"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os/exec"
 	"testing"
 )
+
+func TestSerializeVersionOnly(t *testing.T) {
+	// Given
+	config := &vrs.VrsConfig{Version: "0.0.0"}
+
+	// When
+	configBytes, err := yaml.Marshal(config)
+	assert.NoError(t, err)
+
+	// Then
+	assert.Equal(t, "version: 0.0.0\n", string(configBytes))
+}
 
 func TestReadCurrentVersionDetectNoVersioonFile(t *testing.T) {
 	// Given

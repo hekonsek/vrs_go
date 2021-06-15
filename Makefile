@@ -15,3 +15,10 @@ build: vendor fmt
 
 gosec:
 	gosec vrs main
+
+install: build
+	sudo cp out/vrs /usr/local/bin/
+
+release: install
+	docker build -t hekonsek/vrs out
+	docker push hekonsek/vrs

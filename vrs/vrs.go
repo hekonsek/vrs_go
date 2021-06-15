@@ -14,10 +14,10 @@ import (
 
 const VrsConfigFileName = "vrs.yml"
 
-type VersioonConfig struct {
+type VrsConfig struct {
 	Version  string
-	Sync     *Sync
-	Profiles []*Profile
+	Sync     *Sync      `yaml:",omitempty"`
+	Profiles []*Profile `yaml:",omitempty"`
 }
 
 type Sync struct {
@@ -36,7 +36,7 @@ type Profile struct {
 
 var NoVersioonFileFound = errors.New("no vrs file found")
 
-func ParseVersioonConfig(basePath string) (*VersioonConfig, error) {
+func ParseVersioonConfig(basePath string) (*VrsConfig, error) {
 	versioonConfigPath := path.Join(basePath, VrsConfigFileName)
 	if _, err := os.Stat(versioonConfigPath); err != nil {
 		if os.IsNotExist(err) {
@@ -49,7 +49,7 @@ func ParseVersioonConfig(basePath string) (*VersioonConfig, error) {
 		return nil, err
 	}
 
-	config := &VersioonConfig{}
+	config := &VrsConfig{}
 	err = yaml.Unmarshal(yml, config)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func ParseVersioonConfig(basePath string) (*VersioonConfig, error) {
 	return config, nil
 }
 
-func (config *VersioonConfig) Write(basePath string) error {
+func (config *VrsConfig) Write(basePath string) error {
 	yml, err := yaml.Marshal(config)
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func (config *VersioonConfig) Write(basePath string) error {
 	return nil
 }
 
-func (config *VersioonConfig) WriteAndCommit(baseDir string, commit bool, push bool, commitMessage string) error {
+func (config *VrsConfig) WriteAndCommit(baseDir string, commit bool, push bool, commitMessage string) error {
 	err := config.Write(baseDir)
 	if err != nil {
 		return err
@@ -145,7 +145,7 @@ func Init(options *InitOptions) error {
 		}
 		options = o
 	}
-	err := (&VersioonConfig{Version: "0.0.0"}).WriteAndCommit(options.Basedir, options.GitCommit, options.GitPush, "Initialized versioon file.")
+	err := (&VrsConfig{Version: "0.0.0"}).WriteAndCommit(options.Basedir, options.GitCommit, options.GitPush, "Initialized versioon file.")
 	if err != nil {
 		return err
 	}
