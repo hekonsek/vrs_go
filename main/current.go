@@ -14,7 +14,7 @@ func init() {
 var currentCommand = &cobra.Command{
 	Use: "current",
 	Run: func(cmd *cobra.Command, args []string) {
-		version, err := vrs.ReadCurrentVersion(nil)
+		version, _, err := vrs.ReadCurrentVersion(nil)
 		osexit.ExitOnError(err)
 
 		fmt.Print(version)

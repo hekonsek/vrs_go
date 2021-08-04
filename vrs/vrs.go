@@ -58,6 +58,70 @@ func ParseVersioonConfig(basePath string) (*VrsConfig, error) {
 	return config, nil
 }
 
+func FilelessVrsConfig(basePath string) (*VrsConfig, error) {
+	cmd := exec.Command("git", "tag")
+	cmd.Dir = basePath
+	outBytes, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+	out := string(outBytes)
+	outLines := strings.Split(out, "\n")
+	latestVersion := "0.0.0"
+	for _, line := range outLines {
+		if strings.HasPrefix(line, "v") {
+			version := line[1:]
+			versionComponents := strings.Split(version, ".")
+			latestVersionComponents := strings.Split(latestVersion, ".")
+
+			versionMajor, err := strconv.Atoi(versionComponents[0])
+			if err != nil {
+				continue
+			}
+			latestVersionMajor, err := strconv.Atoi(latestVersionComponents[0])
+			if err != nil {
+				return nil, err
+			}
+			if versionMajor > latestVersionMajor {
+				latestVersion = version
+				continue
+			}
+			if versionMajor != latestVersionMajor {
+				continue
+			}
+
+			versionMinor, err := strconv.Atoi(versionComponents[1])
+			if err != nil {
+				continue
+			}
+			latestVersionMinor, err := strconv.Atoi(latestVersionComponents[1])
+			if err != nil {
+				return nil, err
+			}
+			if versionMinor > latestVersionMinor {
+				latestVersion = version
+			}
+			if versionMinor != latestVersionMinor {
+				continue
+			}
+
+			versionMaint, err := strconv.Atoi(versionComponents[2])
+			if err != nil {
+				continue
+			}
+			latestVersionMaint, err := strconv.Atoi(latestVersionComponents[2])
+			if err != nil {
+				return nil, err
+			}
+			if versionMaint > latestVersionMaint {
+				latestVersion = version
+			}
+		}
+	}
+
+	return &VrsConfig{Version: latestVersion}, nil
+}
+
 func (config *VrsConfig) Write(basePath string) error {
 	yml, err := yaml.Marshal(config)
 	if err != nil {
@@ -70,31 +134,34 @@ func (config *VrsConfig) Write(basePath string) error {
 	return nil
 }
 
-func (config *VrsConfig) WriteAndCommit(baseDir string, commit bool, push bool, commitMessage string) error {
-	err := config.Write(baseDir)
-	if err != nil {
-		return err
+func (config *VrsConfig) WriteAndCommit(baseDir string, fileless bool, commit bool, push bool, commitMessage string) error {
+	if !fileless {
+		err := config.Write(baseDir)
+		if err != nil {
+			return err
+		}
 	}
-
 	if commit {
-		cmd := exec.Command("git", "add", VrsConfigFileName)
-		cmd.Dir = baseDir
-		err = cmd.Run()
-		if err != nil {
-			return err
+		if !fileless {
+			cmd := exec.Command("git", "add", VrsConfigFileName)
+			cmd.Dir = baseDir
+			err := cmd.Run()
+			if err != nil {
+				return err
+			}
+
+			// #nosec - Git commit message is safe to set via variable.
+			cmd = exec.Command("git", "commit", "-m", commitMessage)
+			cmd.Dir = baseDir
+			err = cmd.Run()
+			if err != nil {
+				return err
+			}
 		}
 
-		// #nosec - Git commit message is safe to set via variable.
-		cmd = exec.Command("git", "commit", "-m", commitMessage)
+		cmd := exec.Command("git", "tag", "v"+config.Version)
 		cmd.Dir = baseDir
-		err = cmd.Run()
-		if err != nil {
-			return err
-		}
-
-		cmd = exec.Command("git", "tag", "v"+config.Version)
-		cmd.Dir = baseDir
-		err = cmd.Run()
+		err := cmd.Run()
 		if err != nil {
 			return err
 		}
@@ -145,7 +212,7 @@ func Init(options *InitOptions) error {
 		}
 		options = o
 	}
-	err := (&VrsConfig{Version: "0.0.0"}).WriteAndCommit(options.Basedir, options.GitCommit, options.GitPush, "Initialized versioon file.")
+	err := (&VrsConfig{Version: "0.0.0"}).WriteAndCommit(options.Basedir, false, options.GitCommit, options.GitPush, "Initialized versioon file.")
 	if err != nil {
 		return err
 	}
@@ -153,6 +220,7 @@ func Init(options *InitOptions) error {
 }
 
 type BumpOptions struct {
+	Fileless       bool
 	Basedir        string
 	GitCommit      bool
 	GitPush        bool
@@ -165,6 +233,7 @@ func NewDefaultBumpOptions() (*BumpOptions, error) {
 		return nil, err
 	}
 	return &BumpOptions{
+		Fileless:  false,
 		Basedir:   wd,
 		GitCommit: true,
 		GitPush:   true,
@@ -182,7 +251,14 @@ func Bump(options *BumpOptions) error {
 
 	config, err := ParseVersioonConfig(options.Basedir)
 	if err != nil {
-		return err
+		if err == NoVersioonFileFound {
+			config, err = FilelessVrsConfig(options.Basedir)
+			if err != nil {
+				return NoVersioonFileFound
+			}
+		} else {
+			return err
+		}
 	}
 
 	oldVersion := config.Version
@@ -191,8 +267,8 @@ func Bump(options *BumpOptions) error {
 	if err != nil {
 		return err
 	}
-	config.Version = fmt.Sprintf("%s.%d.%s", versionParts[0], minorVersion+1, versionParts[2])
-	err = config.WriteAndCommit(options.Basedir, options.GitCommit, options.GitPush, "Version bump.")
+	config.Version = fmt.Sprintf("%s.%d.%d", versionParts[0], minorVersion+1, 0)
+	err = config.WriteAndCommit(options.Basedir, options.Fileless, options.GitCommit, options.GitPush, "Version bump.")
 	if err != nil {
 		return err
 	}
@@ -292,18 +368,25 @@ func NewDefaultReadCurrentOptions() (*ReadCurrentOptions, error) {
 	}, nil
 }
 
-func ReadCurrentVersion(options *ReadCurrentOptions) (string, error) {
+func ReadCurrentVersion(options *ReadCurrentOptions) (string, bool, error) {
 	if options == nil {
 		o, err := NewDefaultReadCurrentOptions()
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
 		options = o
 	}
 
 	config, err := ParseVersioonConfig(options.Basedir)
 	if err != nil {
-		return "", err
+		if err == NoVersioonFileFound {
+			config, err = FilelessVrsConfig(options.Basedir)
+			if err != nil {
+				return "", false, NoVersioonFileFound
+			}
+			return config.Version, true, nil
+		}
+		return "", false, err
 	}
-	return config.Version, nil
+	return config.Version, false, nil
 }

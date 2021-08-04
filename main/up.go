@@ -18,16 +18,17 @@ func init() {
 var upCommand = &cobra.Command{
 	Use: "up",
 	Run: func(cmd *cobra.Command, args []string) {
-		oldVersion, err := vrs.ReadCurrentVersion(nil)
+		oldVersion, isFileless, err := vrs.ReadCurrentVersion(nil)
 		osexit.ExitOnError(err)
 
 		bumpOptions, err := vrs.NewDefaultBumpOptions()
 		osexit.ExitOnError(err)
 		bumpOptions.ActiveProfiles = upCommandProfiles
+		bumpOptions.Fileless = isFileless
 		err = vrs.Bump(bumpOptions)
 		osexit.ExitOnError(err)
 
-		newVersion, err := vrs.ReadCurrentVersion(nil)
+		newVersion, _, err := vrs.ReadCurrentVersion(nil)
 		osexit.ExitOnError(err)
 
 		fmt.Printf("Version %s bumped to version %s.\n", color.GreenString(oldVersion), color.GreenString(newVersion))
