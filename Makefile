@@ -6,15 +6,16 @@ vendor:
 fmt:
 	go fmt main/*.go
 	go fmt vrs/*.go
+	go fmt exe/*.go
 
 test:
-	go test github.com/hekonsek/vrs/vrs
+	go test github.com/hekonsek/vrs/vrs github.com/hekonsek/vrs/exe
 
 build: vendor fmt
 	go build -o out/vrs main/*.go
 
 gosec:
-	gosec vrs main
+	gosec vrs main exe
 
 install: build
 	sudo cp out/vrs /usr/local/bin/

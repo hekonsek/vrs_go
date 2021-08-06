@@ -3,6 +3,7 @@ package vrs
 import (
 	"errors"
 	"fmt"
+	"github.com/hekonsek/vrs/exe"
 	"gopkg.in/yaml.v2"
 	"os"
 	"os/exec"
@@ -59,16 +60,16 @@ func ParseVersioonConfig(basePath string) (*VrsConfig, error) {
 }
 
 func FilelessVrsConfig(basePath string) (*VrsConfig, error) {
-	cmd := exec.Command("git", "tag")
-	cmd.Dir = basePath
-	outBytes, err := cmd.CombinedOutput()
+	gitTag := exe.New("git tag").InDirectory(basePath)
+	output, success, err := gitTag.Run()
 	if err != nil {
 		return nil, err
 	}
-	out := string(outBytes)
-	outLines := strings.Split(out, "\n")
+	if !success {
+		return nil, gitTag.NoSuccessReport()
+	}
 	latestVersion := "0.0.0"
-	for _, line := range outLines {
+	for _, line := range output {
 		if strings.HasPrefix(line, "v") {
 			version := line[1:]
 			versionComponents := strings.Split(version, ".")
