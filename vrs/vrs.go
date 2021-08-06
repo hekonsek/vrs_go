@@ -60,16 +60,15 @@ func ParseVersioonConfig(basePath string) (*VrsConfig, error) {
 }
 
 func FilelessVrsConfig(basePath string) (*VrsConfig, error) {
-	gitTag := exe.New("git tag").InDirectory(basePath)
-	output, success, err := gitTag.Run()
-	if err != nil {
-		return nil, err
+	result := exe.New("git tag").InDirectory(basePath).Run()
+	if result.Err() != nil {
+		return nil, result.Err()
 	}
-	if !success {
-		return nil, gitTag.NoSuccessReport()
+	if !result.Success() {
+		return nil, result.NoSuccessReport()
 	}
 	latestVersion := "0.0.0"
-	for _, line := range output {
+	for _, line := range result.Output() {
 		if strings.HasPrefix(line, "v") {
 			version := line[1:]
 			versionComponents := strings.Split(version, ".")

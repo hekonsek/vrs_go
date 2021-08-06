@@ -8,8 +8,15 @@ import (
 )
 
 type exe struct {
-	cmd    *exec.Cmd
-	output []string
+	cmd *exec.Cmd
+}
+
+type runResult struct {
+	exe *exe
+
+	output  []string
+	success bool
+	err     error
 }
 
 func New(command string) *exe {
@@ -23,28 +30,39 @@ func (exe *exe) InDirectory(dir string) *exe {
 	return exe
 }
 
-func (exe *exe) Run() (output []string, success bool, err error) {
+func (exe *exe) Run() *runResult {
 	outputBytes, err := exe.cmd.CombinedOutput()
 	outputLines := strings.Split(string(outputBytes), "\n")
-	exe.output = outputLines
 	if outputLines[len(outputLines)-1] == "" {
 		outputLines = outputLines[0 : len(outputLines)-1]
 	}
 	if e, ok := err.(*exec.ExitError); ok {
-		return outputLines, e.Success(), nil
+		return &runResult{exe: exe, output: outputLines, success: e.Success(), err: nil}
 	}
-	return outputLines, true, err
+	return &runResult{exe: exe, output: outputLines, success: true, err: err}
 }
 
-func (exe *exe) NoSuccessReport() error {
-	command := exe.cmd.Path
-	for _, arg := range exe.cmd.Args {
+func (result *runResult) NoSuccessReport() error {
+	command := result.exe.cmd.Path
+	for _, arg := range result.exe.cmd.Args {
 		command += fmt.Sprintf(" %s", arg)
 	}
 	return errors.New(fmt.Sprintf("Cannot succesfully execute '%s' command:\n%s",
 		command,
-		strings.Join(exe.output, "\n")),
+		strings.Join(result.output, "\n")),
 	)
+}
+
+func (result *runResult) Output() []string {
+	return result.output
+}
+
+func (result *runResult) Success() bool {
+	return result.success
+}
+
+func (result *runResult) Err() error {
+	return result.err
 }
 
 func ParseCommand(command string) []string {

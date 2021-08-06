@@ -11,12 +11,12 @@ func TestExeEcho(t *testing.T) {
 	exec := exe.New("echo foo")
 
 	// When
-	lines, success, err := exec.Run()
+	result := exec.Run()
 
 	// Then
-	assert.NoError(t, err)
-	assert.Len(t, lines, 1)
-	assert.True(t, success)
+	assert.NoError(t, result.Err())
+	assert.Len(t, result.Output(), 1)
+	assert.True(t, result.Success())
 }
 
 func TestChangingDir(t *testing.T) {
@@ -24,12 +24,12 @@ func TestChangingDir(t *testing.T) {
 	exec := exe.New("cat resolv.conf").InDirectory("/etc")
 
 	// When
-	lines, success, err := exec.Run()
+	result := exec.Run()
 
 	// Then
-	assert.NoError(t, err)
-	assert.Greater(t, len(lines), 1)
-	assert.True(t, success)
+	assert.NoError(t, result.Err())
+	assert.Greater(t, len(result.Output()), 1)
+	assert.True(t, result.Success())
 }
 
 func TestNoSuccess(t *testing.T) {
@@ -37,25 +37,25 @@ func TestNoSuccess(t *testing.T) {
 	exec := exe.New("cat noSuchFile")
 
 	// When
-	lines, success, err := exec.Run()
+	result := exec.Run()
 
 	// Then
-	assert.NoError(t, err)
-	assert.False(t, success)
-	assert.Len(t, lines, 1)
-	assert.Contains(t, lines[0], "No such file or directory")
+	assert.NoError(t, result.Err())
+	assert.False(t, result.Success())
+	assert.Len(t, result.Output(), 1)
+	assert.Contains(t, result.Output()[0], "No such file or directory")
 }
 
 func TestNoSuccessReport(t *testing.T) {
 	// Given
 	exec := exe.New("cat noSuchFile")
-	_, success, err := exec.Run()
+	result := exec.Run()
 
 	// When
-	report := exec.NoSuccessReport()
+	report := result.NoSuccessReport()
 
 	// Then
-	assert.NoError(t, err)
-	assert.False(t, success)
+	assert.NoError(t, result.Err())
+	assert.False(t, result.Success())
 	assert.Contains(t, report.Error(), "No such file or directory")
 }
