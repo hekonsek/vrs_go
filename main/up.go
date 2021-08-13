@@ -12,7 +12,7 @@ var upVersionPrefix string
 var upCommandProfiles []string
 
 func init() {
-	upCommand.Flags().StringVarP(&upVersionPrefix, "version-prefix", "v", "v", "")
+	upCommand.Flags().StringVarP(&upVersionPrefix, "version-prefix", "p", "v", "")
 	upCommand.Flags().StringSliceVar(&upCommandProfiles, "profile", []string{}, "")
 	verCommand.AddCommand(upCommand)
 }

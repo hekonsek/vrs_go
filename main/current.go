@@ -10,7 +10,7 @@ import (
 var currentVersionPrefix string
 
 func init() {
-	currentCommand.Flags().StringVarP(&currentVersionPrefix, "version-prefix", "v", "v", "")
+	currentCommand.Flags().StringVarP(&currentVersionPrefix, "version-prefix", "p", "v", "")
 	verCommand.AddCommand(currentCommand)
 }
 
