@@ -9,13 +9,13 @@ fmt:
 	go fmt exe/*.go
 
 test:
-	go test github.com/hekonsek/vrs/vrs github.com/hekonsek/vrs/exe
+	go test github.com/hekonsek/vrs/vrs github.com/hekonsek/vrs/exe github.com/hekonsek/vrs/semver
 
 build: vendor fmt
 	go build -o out/vrs main/*.go
 
 gosec:
-	gosec vrs main exe
+	gosec vrs main exe semver
 
 install: build
 	sudo cp out/vrs /usr/local/bin/
