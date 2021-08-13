@@ -69,8 +69,8 @@ func FilelessVrsConfig(basePath string, versionPrefix string) (*VrsConfig, error
 	}
 	latestVersion := "0.0.0"
 	for _, line := range result.Output() {
-		if strings.HasPrefix(line, "v") {
-			version := line[1:]
+		if strings.HasPrefix(line, versionPrefix) {
+			version := line[len(versionPrefix):]
 			versionComponents := strings.Split(version, ".")
 			latestVersionComponents := strings.Split(latestVersion, ".")
 
